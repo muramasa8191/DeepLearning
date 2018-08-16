@@ -1,5 +1,5 @@
 from tensorflow.python.keras.models import Model
-from tensorflow.python.keras.layers import Input, Conv2D, MaxPooling2D, Dropout, Conv2DTranspose, Concatenate, Activation
+from tensorflow.python.keras.layers import Input, Conv2D, MaxPooling2D, Dropout, Conv2DTranspose, Concatenate, Activation, Add
 from tensorflow.python.keras.applications.vgg16 import VGG16
 
 import sys
@@ -52,13 +52,13 @@ class FCN_VGG16():
         p4 = Conv2D(21, (1, 1), activation='relu', padding='same')(pool4)
         
         #        merge_p4p5 = Add()([p5, p4])
-        merge_p4p5 = Concatenate(axis=3)([p5, p4])
+        merge_p4p5 = Add()([p5, p4])
         merge_p4p5 = Conv2DTranspose(21, (3, 3), strides=(2, 2), padding='same', activation='relu')(merge_p4p5)
         # p3
         p3 = Conv2D(21, (3, 3), padding='same', name="pool3_conv1")(pool3)
         
         #        merge_p3p4p5 = Add()([merge_p4p5, p3])
-        merge_p3p4p5 = Concatenate(axis=3)([merge_p4p5, p3])
+        merge_p3p4p5 = Add()([merge_p4p5, p3])
         
         # deconvolution
         output = Conv2DTranspose(21, (3, 3), strides=(8, 8), activation='relu', padding='same')(merge_p3p4p5)
@@ -97,3 +97,9 @@ class FCN_VGG16():
 
     def summary(self):
         self.model.summary()
+
+    def compile(self, loss, optimizer, metrics):
+        self.model.compile(loss=loss, optimizer=optimizer, metrics=metrics)
+
+    def to_json(self):
+        return self.model.to_json()
