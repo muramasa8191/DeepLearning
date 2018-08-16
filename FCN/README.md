@@ -3,8 +3,8 @@
 [https://arxiv.org/abs/1411.4038](https://arxiv.org/abs/1411.4038)
 
 # ベースモデル
-- [x]VGG16  
-- [ ]ResNet{50, 101}
+- [x] VGG16  
+- [ ] ResNet{50, 101}
 
 # Installation
 requirement.txt準備予定
