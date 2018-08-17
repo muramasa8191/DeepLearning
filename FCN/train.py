@@ -84,6 +84,7 @@ if __name__ == '__main__':
         f.write(model_json)
     
     if GPU_COUNT > 1:
+        from keras.utils.training_utils import multi_gpu_model
         model = multi_gpu_model(model, gpus=GPU_COUNT)
     
     def lr_scheduler(epoch):
