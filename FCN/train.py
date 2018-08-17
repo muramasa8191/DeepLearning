@@ -56,7 +56,7 @@ class ImageGenerator():
 
 if __name__ == '__main__':
 
-    batch_size = 32
+    batch_size = 32  * GPU_COUNT
     epochs = 200
     lr_base = 0.01 * (float(batch_size) / 16)
     input_shape = (224, 224, 3)
