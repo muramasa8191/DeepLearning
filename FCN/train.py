@@ -3,10 +3,13 @@ import math
 import numpy as np
 from Models.VGG16 import FCN_VGG16
 import keras.backend as K
+import tensorflow as tf
 from Utils.pascal_util import *
 from keras.metrics import binary_crossentropy
 from tensorflow.python.keras.callbacks import LearningRateScheduler, TensorBoard, ModelCheckpoint
 from tensorflow.python.keras.optimizers import SGD
+
+GPU_COUNT = 1
 
 """ void should be removed
 def crossentropy_without_void(y_true, y_pred):
@@ -34,19 +37,22 @@ def metrics_without_void(y_true, y_pred):
                        
     return K.sum(tf.to_float(legal_labels & K.equal(K.argmax(y_true, axis=-1), K.argmax(y_pred, axis=-1)))) / K.sum(tf.to_float(legal_labels))
 """
-def train_data_generator(data, labels, batch_size, steps_per_epoch):    
-    def data_generator():
+class ImageGenerator():
+    def __init__(self):
+        pass
+
+    def flow_from_directory(self, data, labels, batch_size, steps_per_epoch):
         data_size = len(data)
-        for batch_num in range(steps_per_epoch):
-            start_index = batch_num * batch_size
-            end_index = min((batch_num + 1) * batch_size, data_size)
-            img_data, img_label = pascal_data_generator(
-                data[start_index:end_index], 
-                labels[start_index:end_index],
-                size = (224, 224)
-            )
-            yield img_data, img_label
-    return data_generator()
+        while True:
+            for batch_num in range(steps_per_epoch):
+                start_index = batch_num * batch_size
+                end_index = min((batch_num + 1) * batch_size, data_size)
+                img_data, img_label = pascal_data_generator(
+                    data[start_index:end_index], 
+                    labels[start_index:end_index],
+                    size = (224, 224)
+                )
+                yield img_data, img_label
 
 if __name__ == '__main__':
 
@@ -55,7 +61,8 @@ if __name__ == '__main__':
     lr_base = 0.01 * (float(batch_size) / 16)
     input_shape = (224, 224, 3)
     
-    model = FCN_VGG16(input_shape, train=True)
+    with tf.device("/cpu:0"): 
+        model = FCN_VGG16(input_shape, train=True)
 
     model.compile(
         loss='categorical_crossentropy',
@@ -76,6 +83,9 @@ if __name__ == '__main__':
         model_json = model.to_json()
         f.write(model_json)
     
+    if GPU_COUNT > 1:
+        model = multi_gpu_model(model, gpus=GPU_COUNT)
+    
     def lr_scheduler(epoch):
         lr = lr_base * ((1 - float(epoch)/epochs) ** 0.9)
         print('lr: %f' % lr)
@@ -86,14 +96,16 @@ if __name__ == '__main__':
 
     checkpoint = ModelCheckpoint(filepath=checkpoint_path, save_weights_only=True)
 
-    train_files, train_labels = get_train_files('Dataset/VOC2012/')
-    val_files, val_labels = get_train_files('Dataset/VOC2012/')
+    train_files, train_labels = get_train_files('Dataset/VOC2012')
+    val_files, val_labels = get_train_files('Dataset/VOC2012')
 
     steps_per_epoch = int(np.ceil(len(train_files) / float(batch_size)))
     val_steps = int(np.ceil(len(val_files) / float(batch_size)))
 
+    gen = ImageGenerator()
+    
     hist = model.model.fit_generator(
-        generator = train_data_generator(train_files, train_labels, batch_size, steps_per_epoch),
+        generator = gen.flow_from_directory(train_files, train_labels, batch_size, steps_per_epoch),
         steps_per_epoch=steps_per_epoch,
         epochs=epochs,
 #        validation_data = train_data_generator(val_files, val_labels, batch_size, steps_per_epoch), 
