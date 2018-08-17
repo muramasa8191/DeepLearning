@@ -2,7 +2,7 @@
 ディープラーニングに関する論文の実装を先行研究から順に進める
 ## Semantic Segmentation
 
-- [FCN](https://github.com/muramasa8191/DeepLearning/FCN/)  
+- [FCN](https://github.com/muramasa8191/DeepLearning/tree/master/FCN)  
 [https://arxiv.org/abs/1411.4038](https://arxiv.org/abs/1411.4038)    
 モデル学習中
 - U-Net
