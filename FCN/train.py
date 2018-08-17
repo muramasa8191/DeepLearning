@@ -38,20 +38,22 @@ def metrics_without_void(y_true, y_pred):
     return K.sum(tf.to_float(legal_labels & K.equal(K.argmax(y_true, axis=-1), K.argmax(y_pred, axis=-1)))) / K.sum(tf.to_float(legal_labels))
 """
 class ImageGenerator():
-    def __init__(self):
-        pass
-
-    def flow_from_directory(self, data, labels, batch_size, steps_per_epoch):
-        data_size = len(data)
+    def __init__(self, data, labels):
+        print("start image loading...")
+        self.train_images, self.train_labels = pascal_data_generator(
+                      data, 
+                      labels,
+                      size = (224, 224)
+                      )
+        print("end image loading...")
+    def flow_from_directory(self, batch_size, steps_per_epoch):
+        data_size = len(self.train_images)
         while True:
             for batch_num in range(steps_per_epoch):
                 start_index = batch_num * batch_size
                 end_index = min((batch_num + 1) * batch_size, data_size)
-                img_data, img_label = pascal_data_generator(
-                    data[start_index:end_index], 
-                    labels[start_index:end_index],
-                    size = (224, 224)
-                )
+                img_data = self.train_images[start_index:end_index] 
+                img_label = self.train_labels[start_index:end_index]
                 yield img_data, img_label
 
 if __name__ == '__main__':
@@ -103,10 +105,10 @@ if __name__ == '__main__':
     steps_per_epoch = int(np.ceil(len(train_files) / float(batch_size)))
     val_steps = int(np.ceil(len(val_files) / float(batch_size)))
 
-    gen = ImageGenerator()
+    gen = ImageGenerator(train_files, train_labels)
     
     hist = model.model.fit_generator(
-        generator = gen.flow_from_directory(train_files, train_labels, batch_size, steps_per_epoch),
+        generator = gen.flow_from_directory(batch_size, steps_per_epoch),
         steps_per_epoch=steps_per_epoch,
         epochs=epochs,
 #        validation_data = train_data_generator(val_files, val_labels, batch_size, steps_per_epoch), 
