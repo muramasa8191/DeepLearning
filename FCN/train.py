@@ -8,6 +8,7 @@ from Utils.pascal_util import *
 from keras.metrics import binary_crossentropy
 from tensorflow.python.keras.callbacks import LearningRateScheduler, TensorBoard, ModelCheckpoint
 from tensorflow.python.keras.optimizers import SGD
+from tensorflow.python.keras.preprocessing.image import ImageDataGenerator
 
 GPU_COUNT = 1
 RESUME = False
@@ -57,8 +58,8 @@ class ImageGenerator():
 
 if __name__ == '__main__':
 
-    batch_size = 16  * GPU_COUNT
-    epochs = 5
+    batch_size = 32 * GPU_COUNT
+    epochs = 100
     lr_base = 0.01 * (float(batch_size) / 16)
     input_shape = (224, 224, 3)
     
@@ -101,22 +102,34 @@ if __name__ == '__main__':
 
     checkpoint = ModelCheckpoint(filepath=checkpoint_path, save_weights_only=True)
 
-    train_files, train_labels = get_train_files('Dataset/VOC2012')
-    val_files, val_labels = get_train_files('Dataset/VOC2012')
+    train_files, label_files = get_train_files('Dataset/VOC2012')
+#    val_files, val_labels = get_train_files('Dataset/VOC2012')
 
     steps_per_epoch = int(np.ceil(len(train_files) / float(batch_size)))
-    val_steps = int(np.ceil(len(val_files) / float(batch_size)))
+#    val_steps = int(np.ceil(len(val_files) / float(batch_size)))
 
-    gen = ImageGenerator()
+#    gen = ImageGenerator()
+#    datagen = ImageDataGenerator()
+    img_data, img_labels = pascal_data_generator(train_files, label_files, size=(224, 224))
+#    datagen.fit(img_data)
     
-    hist = model.model.fit_generator(
-        generator = gen.flow_from_directory(train_files, train_labels, batch_size, steps_per_epoch),
-        steps_per_epoch=steps_per_epoch,
-        epochs=epochs,
-        workers=4,
-#        validation_data = train_data_generator(val_files, val_labels, batch_size, steps_per_epoch), 
-#        validation_steps = 
-        callbacks = [tsb, checkpoint]#[scheduler, tsb, checkpoint]
-    )
-
+#    hist = model.model.fit_generator(
+##        generator = gen.flow_from_directory(train_files, label_files, batch_size, steps_per_epoch),
+#        generator=datagen.flow(img_data, img_labels, batch_size=batch_size),
+#        steps_per_epoch=steps_per_epoch,
+#        epochs=epochs,
+#        workers=4,
+#        use_multiprocessing=True,
+##        validation_data = train_data_generator(val_files, val_labels, batch_size, steps_per_epoch), 
+##        validation_steps = 
+#        callbacks = [tsb, checkpoint]#[scheduler, tsb, checkpoint]
+#    )
+    hist = model.model.fit(
+            img_data, 
+            img_labels, 
+            initial_epoch=14,
+            epochs=epochs,
+            batch_size=batch_size,
+            callbacks=[tsb, checkpoint]
+        )
     model.model.save_weights(save_path+'/model.hdf5')
