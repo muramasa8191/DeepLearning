@@ -1,5 +1,5 @@
 from tensorflow.python.keras.models import Model
-from tensorflow.python.keras.layers import Input, Conv2D, MaxPooling2D, Dropout, Conv2DTranspose, Concatenate, Activation, Add
+from tensorflow.python.keras.layers import Input, Conv2D, MaxPooling2D, Dropout, Conv2DTranspose, Concatenate, Activation, Add, BatchNormalization
 from tensorflow.python.keras.applications.vgg16 import VGG16
 
 import sys
@@ -7,7 +7,7 @@ import os
 
 class FCN_VGG16():
     
-    def build(self, input_shape, train):
+    def build(self, input_shape, train=False):
         """
             
         """
@@ -38,10 +38,10 @@ class FCN_VGG16():
         x = pool5 = MaxPooling2D(strides=(2, 2), name="block5_pool")(x)
 
         # fully-connected layer
-        x = Conv2D(4096, (7, 7), activation='relu', padding='same', name='conv6')(x)
-        x = Dropout(0.5)(x)
-        x = Conv2D(4096, (1, 1), activation='relu', padding='same', name='conv7')(x)
-        x = Dropout(0.5)(x)
+        #x = Conv2D(4096, (7, 7), activation='relu', padding='same', name='conv6')(x)
+        #x = Dropout(0.5)(x)
+        #x = Conv2D(4096, (1, 1), activation='relu', padding='same', name='conv7')(x)
+        #x = Dropout(0.5)(x)
 
         x = Conv2D(21, (1, 1), activation='relu', padding='same')(x)
 
@@ -53,12 +53,14 @@ class FCN_VGG16():
         
         #        merge_p4p5 = Add()([p5, p4])
         merge_p4p5 = Add()([p5, p4])
+        merge_p4p5 = BatchNormalization(axis=-1, momentum=0.99)(merge_p4p5)
         merge_p4p5 = Conv2DTranspose(21, (3, 3), strides=(2, 2), padding='same', activation='relu')(merge_p4p5)
         # p3
         p3 = Conv2D(21, (3, 3), padding='same', name="pool3_conv1")(pool3)
         
         #        merge_p3p4p5 = Add()([merge_p4p5, p3])
         merge_p3p4p5 = Add()([merge_p4p5, p3])
+        merge_p3p4p5 = BatchNormalization(axis=-1, momentum=0.99)(merge_p3p4p5)
         
         # deconvolution
         output = Conv2DTranspose(21, (3, 3), strides=(8, 8), activation='relu', padding='same')(merge_p3p4p5)
@@ -80,13 +82,15 @@ class FCN_VGG16():
 
         else:
             # load weights
-            model_dir = os.path.joint(
-                'models',
-                'VGG16base'
+            current_dir = os.path.dirname(os.path.realpath(__file__))
+            learnt_model_dir = os.path.join(current_dir, '../tmp/fcn_vgg16/')
+            learnt_model_dir = os.path.normpath(learnt_model_dir)
+            weights_path = os.path.join(
+                learnt_model_dir,
+                #                'checkpoint_weights.hdf5'
+                'model.hdf5'
             )
-            weights_dir = os.path.join(model_dir, 'weights')
-            weights_path = os.path.expanduser(os.path.join(weights_dir, 'fcn_vgg16_weights.h5'))
-            model.load_weights(weights_path, by_name=True)
+            model.load_weights(weights_path)
 
         return model
     def __init__(self, input_shape, train=False):

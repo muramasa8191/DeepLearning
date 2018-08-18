@@ -10,6 +10,7 @@ from tensorflow.python.keras.callbacks import LearningRateScheduler, TensorBoard
 from tensorflow.python.keras.optimizers import SGD
 
 GPU_COUNT = 1
+RESUME = False
 
 """ void should be removed
 def crossentropy_without_void(y_true, y_pred):
@@ -56,8 +57,8 @@ class ImageGenerator():
 
 if __name__ == '__main__':
 
-    batch_size = 32  * GPU_COUNT
-    epochs = 200
+    batch_size = 16  * GPU_COUNT
+    epochs = 5
     lr_base = 0.01 * (float(batch_size) / 16)
     input_shape = (224, 224, 3)
     
@@ -66,7 +67,7 @@ if __name__ == '__main__':
 
     model.compile(
         loss='categorical_crossentropy',
-        optimizer = SGD(lr=lr_base, momentum=0.9),
+        optimizer = 'adam',#SGD(lr=lr_base, momentum=0.9),
         metrics=['accuracy']
     )
 
@@ -76,6 +77,9 @@ if __name__ == '__main__':
         os.mkdir(save_path)
 
     checkpoint_path = os.path.join(save_path, 'checkpoint_weights.hdf5')
+    if RESUME:
+        print('checkPoint file:{}'.format(checkpoint_path))
+        model.model.load_weights(checkpoint_path, by_name=False)
 
     model_path = os.path.join(save_path, "model.json")
     # save model structure
@@ -109,9 +113,10 @@ if __name__ == '__main__':
         generator = gen.flow_from_directory(train_files, train_labels, batch_size, steps_per_epoch),
         steps_per_epoch=steps_per_epoch,
         epochs=epochs,
+        workers=4,
 #        validation_data = train_data_generator(val_files, val_labels, batch_size, steps_per_epoch), 
 #        validation_steps = 
-        callbacks = [scheduler, tsb, checkpoint]
+        callbacks = [tsb, checkpoint]#[scheduler, tsb, checkpoint]
     )
 
-    model.save_weights(save_path+'/model.hdf5')
+    model.model.save_weights(save_path+'/model.hdf5')
