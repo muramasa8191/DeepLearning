@@ -39,9 +39,9 @@ class FCN_VGG16():
 
         # fully-connected layer
         x = Conv2D(4096, (7, 7), activation='relu', padding='same', name="fc1")(x)
-        x = Dropout(0.5)(x)
+        x = Dropout(0.5, name="fc1_dropout")(x)
         x = Conv2D(4096, (1, 1), activation='relu', padding='same', name="fc2")(x)
-        x = Dropout(0.5)(x)
+        x = Dropout(0.5, name="fc2_dropout")(x)
 
         x = Conv2D(21, (1, 1), activation='relu', padding='same', name="fc_conv")(x)
 
@@ -76,7 +76,7 @@ class FCN_VGG16():
             for layer_name in layer_names:
                 layer = model.get_layer(layer_name)
                 layer.set_weights(vgg16.get_layer(layer_name).get_weights())
-                layer.trainable = False
+#                layer.trainable = False
 
         else:
             # load weights
