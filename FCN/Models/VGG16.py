@@ -38,33 +38,31 @@ class FCN_VGG16():
         x = pool5 = MaxPooling2D(strides=(2, 2), name="block5_pool")(x)
 
         # fully-connected layer
-        #x = Conv2D(4096, (7, 7), activation='relu', padding='same', name='conv6')(x)
-        #x = Dropout(0.5)(x)
-        #x = Conv2D(4096, (1, 1), activation='relu', padding='same', name='conv7')(x)
-        #x = Dropout(0.5)(x)
+        x = Conv2D(4096, (7, 7), activation='relu', padding='same', name="fc1")(x)
+        x = Dropout(0.5)(x)
+        x = Conv2D(4096, (1, 1), activation='relu', padding='same', name="fc2")(x)
+        x = Dropout(0.5)(x)
 
-        x = Conv2D(21, (1, 1), activation='relu', padding='same')(x)
+        x = Conv2D(21, (1, 1), activation='relu', padding='same', name="fc_conv")(x)
 
         # p5
-        #        p5 = Conv2D(21, (1, 1), activation='relu', padding='same')(pool5)
-        p5 = Conv2DTranspose(21, (3, 3), strides=(2, 2), padding='same', activation='relu')(x)
+        p5 = Conv2D(21, (1, 1), activation='relu', padding='same', name= "p5_conv")(x)
+        p5 = Conv2DTranspose(21, (3, 3), strides=(2, 2), padding='same', activation='relu', name="p5_deconv")(p5)
         # p4
-        p4 = Conv2D(21, (1, 1), activation='relu', padding='same')(pool4)
+        p4 = Conv2D(21, (1, 1), activation='relu', padding='same', name="p4_conv")(pool4)
         
         #        merge_p4p5 = Add()([p5, p4])
-        merge_p4p5 = Add()([p5, p4])
-        merge_p4p5 = BatchNormalization(axis=-1, momentum=0.99)(merge_p4p5)
-        merge_p4p5 = Conv2DTranspose(21, (3, 3), strides=(2, 2), padding='same', activation='relu')(merge_p4p5)
+        merge_p4p5 = Add(name="p4p5_add")([p5, p4])
+        merge_p4p5 = Conv2DTranspose(21, (3, 3), strides=(2, 2), padding='same', activation='relu', name="p4p5_deconv")(merge_p4p5)
         # p3
-        p3 = Conv2D(21, (3, 3), padding='same', name="pool3_conv1")(pool3)
+        p3 = Conv2D(21, (3, 3), padding='same', name="p3_conv")(pool3)
         
         #        merge_p3p4p5 = Add()([merge_p4p5, p3])
-        merge_p3p4p5 = Add()([merge_p4p5, p3])
-        merge_p3p4p5 = BatchNormalization(axis=-1, momentum=0.99)(merge_p3p4p5)
+        merge_p3p4p5 = Add(name="p3p4p5_add")([merge_p4p5, p3])
         
         # deconvolution
-        output = Conv2DTranspose(21, (3, 3), strides=(8, 8), activation='relu', padding='same')(merge_p3p4p5)
-        output = Activation('softmax')(output)
+        output = Conv2DTranspose(21, (3, 3), strides=(8, 8), activation='relu', padding='same', name="out_deconv")(merge_p3p4p5)
+        output = Activation('softmax', name="out")(output)
 
         model = Model(input_image, output)
 
@@ -83,10 +81,10 @@ class FCN_VGG16():
         else:
             # load weights
             current_dir = os.path.dirname(os.path.realpath(__file__))
-            learnt_model_dir = os.path.join(current_dir, '../tmp/fcn_vgg16/')
-            learnt_model_dir = os.path.normpath(learnt_model_dir)
+            learned_model_dir = os.path.join(current_dir, '../tmp/fcn_vgg16/')
+            learned_model_dir = os.path.normpath(learned_model_dir)
             weights_path = os.path.join(
-                learnt_model_dir,
+                learned_model_dir,
                 #                'checkpoint_weights.hdf5'
                 'model.hdf5'
             )

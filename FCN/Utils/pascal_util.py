@@ -2,6 +2,7 @@
 import os
 import numpy as np
 from PIL import Image
+from tensorflow.python.keras.utils import to_categorical
 
 CLASSES = 21
 SEGMENTATION_IMAGE_DIR = 'ImageSets/Segmentation/'
@@ -60,8 +61,10 @@ def pascal_data_generator(data_paths, val_paths, size=None):
     img_segmented = np.where(img_segmented == 255, 0, img_segmented)
 
     # change 0 - 21
-    identity = np.identity(CLASSES, dtype=np.uint8)
-    img_segmented = identity[img_segmented]
+#    identity = np.identity(CLASSES, dtype=np.uint8)
+#    img_segmented = identity[img_segmented]
+    img_segmented = to_categorical(img_segmented, CLASSES)
+
     return [img_data, img_segmented] 
 
 def get_train_files(root_dir):

@@ -39,22 +39,6 @@ def metrics_without_void(y_true, y_pred):
                        
     return K.sum(tf.to_float(legal_labels & K.equal(K.argmax(y_true, axis=-1), K.argmax(y_pred, axis=-1)))) / K.sum(tf.to_float(legal_labels))
 """
-class ImageGenerator():
-    def __init__(self):
-        pass
-
-    def flow_from_directory(self, data, labels, batch_size, steps_per_epoch):
-        data_size = len(data)
-        while True:
-            for batch_num in range(steps_per_epoch):
-                start_index = batch_num * batch_size
-                end_index = min((batch_num + 1) * batch_size, data_size)
-                img_data, img_label = pascal_data_generator(
-                    data[start_index:end_index], 
-                    labels[start_index:end_index],
-                    size = (224, 224)
-                )
-                yield img_data, img_label
 
 if __name__ == '__main__':
 
@@ -92,12 +76,12 @@ if __name__ == '__main__':
         from keras.utils.training_utils import multi_gpu_model
         model = multi_gpu_model(model, gpus=GPU_COUNT)
     
-    def lr_scheduler(epoch):
-        lr = lr_base * ((1 - float(epoch)/epochs) ** 0.9)
-        print('lr: %f' % lr)
-        return lr
-    
-    scheduler = LearningRateScheduler(lr_scheduler)
+#    def lr_scheduler(epoch):
+#        lr = lr_base * ((1 - float(epoch)/epochs) ** 0.9)
+#        print('lr: %f' % lr)
+#        return lr
+#    
+#    scheduler = LearningRateScheduler(lr_scheduler)
     tsb = TensorBoard(log_dir='./logs')
 
     checkpoint = ModelCheckpoint(filepath=checkpoint_path, save_weights_only=True)
@@ -108,28 +92,49 @@ if __name__ == '__main__':
     steps_per_epoch = int(np.ceil(len(train_files) / float(batch_size)))
 #    val_steps = int(np.ceil(len(val_files) / float(batch_size)))
 
-#    gen = ImageGenerator()
-#    datagen = ImageDataGenerator()
     img_data, img_labels = pascal_data_generator(train_files, label_files, size=(224, 224))
-#    datagen.fit(img_data)
-    
-#    hist = model.model.fit_generator(
-##        generator = gen.flow_from_directory(train_files, label_files, batch_size, steps_per_epoch),
-#        generator=datagen.flow(img_data, img_labels, batch_size=batch_size),
-#        steps_per_epoch=steps_per_epoch,
-#        epochs=epochs,
-#        workers=4,
+
+    data_gen_args = dict(featurewise_center=True,
+                         featurewise_std_normalization=True,
+                         rotation_range=90.,
+                         width_shift_range=0.1,
+                         height_shift_range=0.1,
+                         zoom_range=0.2)
+    image_datagen = ImageDataGenerator(**data_gen_args)
+    mask_datagen = ImageDataGenerator(**data_gen_args)
+
+    # Provide the same seed and keyword arguments to the fit and flow methods
+    seed = 1
+    image_datagen.fit(img_data, augment=True, seed=seed)
+    mask_datagen.fit(img_labels, augment=True, seed=seed)
+
+    image_generator = image_datagen.flow(
+                        img_data,
+                        seed=seed)
+
+    mask_generator = mask_datagen.flow(
+                        img_labels,
+                        seed=seed)
+
+    # combine generators into one which yields image and masks
+    train_generator = zip(image_generator, mask_generator)
+
+    hist = model.model.fit_generator(
+        train_generator,
+        steps_per_epoch=steps_per_epoch,
+        epochs=epochs,
+        workers=4,
 #        use_multiprocessing=True,
-##        validation_data = train_data_generator(val_files, val_labels, batch_size, steps_per_epoch), 
-##        validation_steps = 
-#        callbacks = [tsb, checkpoint]#[scheduler, tsb, checkpoint]
-#    )
-    hist = model.model.fit(
-            img_data, 
-            img_labels, 
-            initial_epoch=14,
-            epochs=epochs,
-            batch_size=batch_size,
-            callbacks=[tsb, checkpoint]
-        )
+#        validation_data = train_data_generator(val_files, val_labels, batch_size, steps_per_epoch), 
+#        validation_steps = 
+        callbacks = [tsb, checkpoint]#[scheduler, tsb, checkpoint]
+    )
+#    hist = model.model.fit(
+#            img_data, 
+#            img_labels, 
+#            initial_epoch=14,
+#            epochs=epochs,
+#            batch_size=batch_size,
+#            callbacks=[tsb, checkpoint]
+#        )
     model.model.save_weights(save_path+'/model.hdf5')
