@@ -47,7 +47,7 @@ class FCN_VGG16():
         x = Conv2D(21, (1, 1), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='relu', padding='same', name="fc_conv")(x)
 
         # p5
-        p5 = Conv2D(21, (1, 1), activation='relu', padding='same', name= "p5_conv")(x)
+        p5 = Conv2D(21, (1, 1), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='relu', padding='same', name= "p5_conv")(x)
         p5 = BilinearUpSampling2D(pool4.shape, data_format='channels_last', name="p5_upsampling")(p5)
         # p4
         p4 = Conv2D(21, (1, 1), activation='relu', padding='same', name="p4_conv")(pool4)
@@ -55,7 +55,7 @@ class FCN_VGG16():
         merge_p4p5 = Add(name="p4p5_add")([p5, p4])
         merge_p4p5 = BilinearUpSampling2D(pool3.shape, data_format='channels_last', name="p4p5_upsampling")(merge_p4p5)
         # p3
-        p3 = Conv2D(21, (3, 3), padding='same', name="p3_conv")(pool3)
+        p3 = Conv2D(21, (3, 3), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), padding='same', name="p3_conv")(pool3)
         
         merge_p3p4p5 = Add(name="p3p4p5_add")([merge_p4p5, p3])
         
