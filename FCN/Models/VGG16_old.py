@@ -1,7 +1,6 @@
 from tensorflow.python.keras.models import Model
 from tensorflow.python.keras.layers import Input, Conv2D, MaxPooling2D, Dropout, Conv2DTranspose, Concatenate, Activation, Add, BatchNormalization
 from tensorflow.python.keras.applications.vgg16 import VGG16
-from layers.BilinearUpSampling2D import BilinearUpSampling2D
 
 import sys
 import os
@@ -48,19 +47,19 @@ class FCN_VGG16():
 
         # p5
         p5 = Conv2D(21, (1, 1), activation='relu', padding='same', name= "p5_conv")(x)
-        p5 = BilinearUpSampling2D(pool4.shape, data_format='channels_last', name="p5_upsampling")(p5)
+        p5 = Conv2DTranspose(21, (3, 3), strides=(2, 2), padding='same', activation='relu', name="p5_deconv")(p5)
         # p4
         p4 = Conv2D(21, (1, 1), activation='relu', padding='same', name="p4_conv")(pool4)
         
         merge_p4p5 = Add(name="p4p5_add")([p5, p4])
-        merge_p4p5 = BilinearUpSampling2D(pool3.shape, data_format='channels_last', name="p4p5_upsampling")(merge_p4p5)
+        merge_p4p5 = Conv2DTranspose(21, (3, 3), strides=(2, 2), padding='same', activation='relu', name="p4p5_deconv")(merge_p4p5)
         # p3
         p3 = Conv2D(21, (3, 3), padding='same', name="p3_conv")(pool3)
         
         merge_p3p4p5 = Add(name="p3p4p5_add")([merge_p4p5, p3])
         
-        # upsampling
-        output = BilinearUpSampling2D(input_image.shape, data_format='channels_last', name="output_upsampling")(merge_p3p4p5)
+        # deconvolution
+        output = Conv2DTranspose(21, (3, 3), strides=(32, 32), activation='relu', padding='same', name="out_deconv")(x)
 #        output = Conv2DTranspose(21, (3, 3), strides=(8, 8), activation='relu', padding='same', name="out_deconv")(merge_p3p4p5)
         output = Activation('softmax', name="out")(output)
 

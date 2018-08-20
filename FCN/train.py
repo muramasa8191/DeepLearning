@@ -56,6 +56,8 @@ if __name__ == '__main__':
         metrics=['accuracy']
     )
 
+    model.summary()
+
     current_dir = os.path.dirname(os.path.realpath(__file__))
     save_path = os.path.join(current_dir, 'tmp/fcn_vgg16')
     if not os.path.exists(save_path):
@@ -66,11 +68,11 @@ if __name__ == '__main__':
         print('checkPoint file:{}'.format(checkpoint_path))
         model.model.load_weights(checkpoint_path, by_name=False)
 
-    model_path = os.path.join(save_path, "model.json")
-    # save model structure
-    with open(model_path, 'w') as f:
-        model_json = model.to_json()
-        f.write(model_json)
+#    model_path = os.path.join(save_path, "model.json")
+#    # save model structure
+#    with open(model_path, 'w') as f:
+#        model_json = model.to_json()
+#        f.write(model_json)
     
     if GPU_COUNT > 1:
         from keras.utils.training_utils import multi_gpu_model
