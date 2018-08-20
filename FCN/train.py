@@ -6,7 +6,7 @@ import keras.backend as K
 import tensorflow as tf
 from Utils.pascal_util import *
 from keras.metrics import binary_crossentropy
-from tensorflow.python.keras.callbacks import LearningRateScheduler, TensorBoard, ModelCheckpoint
+from tensorflow.python.keras.callbacks import LearningRateScheduler, TensorBoard, ModelCheckpoint, EarlyStopping
 from tensorflow.python.keras.optimizers import SGD
 from tensorflow.python.keras.preprocessing.image import ImageDataGenerator
 
@@ -48,11 +48,12 @@ if __name__ == '__main__':
     input_shape = (224, 224, 3)
     
     with tf.device("/cpu:0"): 
-        model = FCN_VGG16(input_shape, train=True)
+        model = FCN_VGG16(input_shape, train=True, weight_decay=3e-3)
 
     model.compile(
         loss='categorical_crossentropy',
-        optimizer = 'adam',#SGD(lr=lr_base, momentum=0.9),
+#        optimizer = 'adam',
+        optimizer = SGD(lr=lr_base, momentum=0.9),
         metrics=['accuracy']
     )
 
@@ -78,14 +79,16 @@ if __name__ == '__main__':
         from keras.utils.training_utils import multi_gpu_model
         model = multi_gpu_model(model, gpus=GPU_COUNT)
     
-#    def lr_scheduler(epoch):
-#        lr = lr_base * ((1 - float(epoch)/epochs) ** 0.9)
-#        print('lr: %f' % lr)
-#        return lr
-#    
-#    scheduler = LearningRateScheduler(lr_scheduler)
+    def lr_scheduler(epoch):
+        lr = lr_base * ((1 - float(epoch)/epochs) ** 0.9)
+        print('lr: %f' % lr)
+        return lr
+    
+    scheduler = LearningRateScheduler(lr_scheduler)
     tsb = TensorBoard(log_dir='./logs')
-
+    early_stopper = EarlyStopping(monitor='loss',
+                              min_delta=0.001,
+                              patience=30)
     checkpoint = ModelCheckpoint(filepath=checkpoint_path, save_weights_only=True)
 
     train_files, label_files = get_train_files('Dataset/VOC2012')
@@ -96,14 +99,16 @@ if __name__ == '__main__':
 
     img_data, img_labels = pascal_data_generator(train_files, label_files, size=(224, 224))
 
-    data_gen_args = dict(featurewise_center=True,
-                         featurewise_std_normalization=True,
-                         rotation_range=90.,
-                         width_shift_range=0.1,
-                         height_shift_range=0.1,
-                         zoom_range=0.2)
-    image_datagen = ImageDataGenerator(**data_gen_args)
-    mask_datagen = ImageDataGenerator(**data_gen_args)
+    image_datagen = ImageDataGenerator(featurewise_center=True,
+                                   featurewise_std_normalization=True,
+                                   rotation_range=90.,
+                                   width_shift_range=0.1,
+                                   height_shift_range=0.1,
+                                   zoom_range=0.2)
+    mask_datagen = ImageDataGenerator(rotation_range=90.,
+                                      width_shift_range=0.1,
+                                      height_shift_range=0.1,
+                                      zoom_range=0.2)
 
     # Provide the same seed and keyword arguments to the fit and flow methods
     seed = 1
@@ -121,22 +126,23 @@ if __name__ == '__main__':
     # combine generators into one which yields image and masks
     train_generator = zip(image_generator, mask_generator)
 
-    hist = model.model.fit_generator(
-        train_generator,
-        steps_per_epoch=steps_per_epoch,
-        epochs=epochs,
-        workers=4,
+#    hist = model.model.fit_generator(
+#        train_generator,
+#        steps_per_epoch=steps_per_epoch,
+#        epochs=epochs,
+#        workers=4,
+#        callbacks = [tsb, checkpoint, early_stopper, scheduler]
 #        use_multiprocessing=True,
 #        validation_data = train_data_generator(val_files, val_labels, batch_size, steps_per_epoch), 
 #        validation_steps = 
-        callbacks = [tsb, checkpoint]#[scheduler, tsb, checkpoint]
-    )
-#    hist = model.model.fit(
-#            img_data, 
-#            img_labels, 
-#            initial_epoch=14,
-#            epochs=epochs,
-#            batch_size=batch_size,
+#   )
+    hist = model.model.fit(
+            img_data, 
+            img_labels, 
+            initial_epoch=14,
+            epochs=epochs,
+            batch_size=batch_size,
 #            callbacks=[tsb, checkpoint]
-#        )
+            callbacks = [tsb, checkpoint, early_stopper, scheduler]
+        )
     model.model.save_weights(save_path+'/model.hdf5')
