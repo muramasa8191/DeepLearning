@@ -29,8 +29,9 @@ def image_generator(file_paths, size=None, normalization=True):
             if image.mode == "RGBA":
                 image = image.convert("RGB")
             image = np.asarray(image)
-            if normalization:
-                image = image / 255.0
+#            if normalization:
+##                image = image / 255.0
+#                image 
             yield image
 
 def pascal_data_generator(data_paths, val_paths, size=None):
