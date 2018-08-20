@@ -16,7 +16,7 @@ class FCN_VGG16():
 
         # Block 1
         x = Conv2D(64, (3, 3), padding='same', kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='relu', name="block1_conv1")(input_image)
-        x = Conv2D(64, (3, 3), padding='same', kernel_initializer='VarianceScaling', activation='relu', name="block1_conv2")(x)
+        x = Conv2D(64, (3, 3), padding='same', kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='relu', name="block1_conv2")(x)
         x = MaxPooling2D(strides=(2, 2), name="block1_pool")(x)
         # Block 2
         x = Conv2D(128, (3, 3), padding='same', kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='relu', name="block2_conv1")(x)
