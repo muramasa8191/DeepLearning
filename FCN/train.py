@@ -4,9 +4,9 @@ import numpy as np
 from Models.VGG16 import FCN_VGG16
 import keras.backend as K
 import tensorflow as tf
-from Utils.pascal_util import *
+from utils.pascal_util import *
 from keras.metrics import binary_crossentropy
-from tensorflow.python.keras.callbacks import LearningRateScheduler, TensorBoard, ModelCheckpoint, EarlyStopping
+from tensorflow.python.keras.callbacks import LearningRateScheduler, TensorBoard, ModelCheckpoint, EarlyStopping, TerminateOnNaN
 from tensorflow.python.keras.optimizers import SGD
 from tensorflow.python.keras.preprocessing.image import ImageDataGenerator
 
@@ -42,7 +42,7 @@ def metrics_without_void(y_true, y_pred):
 
 if __name__ == '__main__':
 
-    batch_size = 32 * GPU_COUNT
+    batch_size = GPU_COUNT
     epochs = 100
     lr_base = 0.01 * (float(batch_size) / 16)
     input_shape = (224, 224, 3)
@@ -59,7 +59,7 @@ if __name__ == '__main__':
 
     model.summary()
 
-    current_dir = os.path.dirname(os.path.realpath(__file__))
+    current_dir = os.getcwd()
     save_path = os.path.join(current_dir, 'tmp/fcn_vgg16')
     if not os.path.exists(save_path):
         os.mkdir(save_path)
@@ -97,52 +97,22 @@ if __name__ == '__main__':
     steps_per_epoch = int(np.ceil(len(train_files) / float(batch_size)))
 #    val_steps = int(np.ceil(len(val_files) / float(batch_size)))
 
-    img_data, img_labels = pascal_data_generator(train_files, label_files, size=(224, 224))
+    datagen = VocImageDataGenerator(image_shape=input_shape,
+                                    featurewise_center=True,
+                                    featurewise_std_normalization=True)
 
-    image_datagen = ImageDataGenerator(featurewise_center=True,
-                                   featurewise_std_normalization=True,
-                                   rotation_range=90.,
-                                   width_shift_range=0.1,
-                                   height_shift_range=0.1,
-                                   zoom_range=0.2)
-    mask_datagen = ImageDataGenerator(rotation_range=90.,
-                                      width_shift_range=0.1,
-                                      height_shift_range=0.1,
-                                      zoom_range=0.2)
-
-    # Provide the same seed and keyword arguments to the fit and flow methods
-    seed = 1
-    image_datagen.fit(img_data, augment=True, seed=seed)
-    mask_datagen.fit(img_labels, augment=True, seed=seed)
-
-    image_generator = image_datagen.flow(
-                        img_data,
-                        seed=seed)
-
-    mask_generator = mask_datagen.flow(
-                        img_labels,
-                        seed=seed)
-
-    # combine generators into one which yields image and masks
-    train_generator = zip(image_generator, mask_generator)
-
-#    hist = model.model.fit_generator(
-#        train_generator,
-#        steps_per_epoch=steps_per_epoch,
-#        epochs=epochs,
-#        workers=4,
-#        callbacks = [tsb, checkpoint, early_stopper, scheduler]
+    hist = model.model.fit_generator(
+        datagen.flow_from_imageset(
+            target_size=(input_shape[0], input_shape[1]),
+            directory='Dataset/VOC2012',
+            class_mode='categorical',
+            classes = 21,
+            batch_size = batch_size,
+            shuffle=True),
+        steps_per_epoch=steps_per_epoch,
+        epochs=epochs,
+        workers=4,
+        callbacks = [tsb, checkpoint, early_stopper, scheduler, TerminateOnNaN()]
 #        use_multiprocessing=True,
-#        validation_data = train_data_generator(val_files, val_labels, batch_size, steps_per_epoch), 
-#        validation_steps = 
-#   )
-    hist = model.model.fit(
-            img_data, 
-            img_labels, 
-            initial_epoch=14,
-            epochs=epochs,
-            batch_size=batch_size,
-#            callbacks=[tsb, checkpoint]
-            callbacks = [tsb, checkpoint, early_stopper, scheduler]
-        )
+   )
     model.model.save_weights(save_path+'/model.hdf5')
