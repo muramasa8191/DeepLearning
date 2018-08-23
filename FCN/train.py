@@ -42,20 +42,21 @@ def metrics_without_void(y_true, y_pred):
 
 if __name__ == '__main__':
 
-    batch_size = GPU_COUNT
+    batch_size = 16 * GPU_COUNT
     epochs = 100
     lr_base = 0.01 * (float(batch_size) / 16)
     input_shape = (224, 224, 3)
     
     with tf.device("/cpu:0"): 
-        model = FCN_VGG16(input_shape, train=True, weight_decay=3e-3)
+        model = FCN_VGG16(input_shape, train=True, weight_decay=3e-3, classes=22)
 
     model.compile(
-        loss='categorical_crossentropy',
-#        optimizer = 'adam',
-        optimizer = SGD(lr=lr_base, momentum=0.9),
-        metrics=['accuracy']
-    )
+      #        loss=crossentropy_without_ambiguous,
+      loss=crossentropy_without_ambiguous,
+#      optimizer = 'adam',
+      optimizer = SGD(lr=lr_base, momentum=0.9),
+      metrics=[categorical_accuracy_without_ambiguous, categorical_accuracy_only_valid_classes]
+      )
 
     model.summary()
 
@@ -67,7 +68,7 @@ if __name__ == '__main__':
     checkpoint_path = os.path.join(save_path, 'checkpoint_weights.hdf5')
     if RESUME:
         print('checkPoint file:{}'.format(checkpoint_path))
-        model.model.load_weights(checkpoint_path, by_name=False)
+        model.load_weights(checkpoint_path, by_name=False)
 
 #    model_path = os.path.join(save_path, "model.json")
 #    # save model structure
@@ -98,21 +99,33 @@ if __name__ == '__main__':
 #    val_steps = int(np.ceil(len(val_files) / float(batch_size)))
 
     datagen = VocImageDataGenerator(image_shape=input_shape,
-                                    featurewise_center=True,
-                                    featurewise_std_normalization=True)
-
-    hist = model.model.fit_generator(
-        datagen.flow_from_imageset(
-            target_size=(input_shape[0], input_shape[1]),
-            directory='Dataset/VOC2012',
-            class_mode='categorical',
-            classes = 21,
-            batch_size = batch_size,
-            shuffle=True),
-        steps_per_epoch=steps_per_epoch,
-        epochs=epochs,
-        workers=4,
-        callbacks = [tsb, checkpoint, early_stopper, scheduler, TerminateOnNaN()]
-#        use_multiprocessing=True,
-   )
-    model.model.save_weights(save_path+'/model.hdf5')
+        zoom_range=[0.5, 2.0],
+        zoom_maintain_shape=True,
+        crop_mode='random',
+        crop_size=(input_shape[0], input_shape[1]),
+        # pad_size=(505, 505),
+        rotation_range=0.,
+        shear_range=0,
+        horizontal_flip=True,
+        channel_shift_range=20.,
+        fill_mode='constant',
+        label_cval=255)
+    
+    hist = model.fit_generator(
+       datagen.flow_from_imageset(
+          target_size=(input_shape[0], input_shape[1]),
+          directory='Dataset/VOC2012',
+          class_mode='categorical',
+          classes = 21,
+          batch_size=batch_size, 
+          shuffle=True,
+          loss_shape=None,
+          normalize=True,
+          ignore_label=255),
+       steps_per_epoch=steps_per_epoch,
+       epochs=epochs,
+       workers=4,
+       use_multiprocessing=True,
+       callbacks = [tsb, checkpoint, early_stopper, scheduler, TerminateOnNaN()]
+    )
+    model.save_weights(save_path+'/model.hdf5')
