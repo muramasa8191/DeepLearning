@@ -8,9 +8,16 @@ import os
 
 class FCN_VGG16():
     
-    def build(self, input_shape, train=False,  weight_decay=0.):
-        """
-            
+    def build(self, input_shape, train=False,  weight_decay=0., classes=22):
+        """ FCN Model based on VGG16
+        Parameters
+        ----------
+        input_shape : (N, M), the shape for the InputLayer
+        train       : use of train or not
+        weight_decay: weight for L2 regularization
+        Reterns
+        --------
+        FCN-VGG16 model
         """
         input_image = Input(shape=input_shape, name="input_1")
 
@@ -44,18 +51,18 @@ class FCN_VGG16():
         x = Conv2D(4096, (1, 1), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='relu', padding='same', name="fc2")(x)
         x = Dropout(0.5, name="fc2_dropout")(x)
 
-        x = Conv2D(21, (1, 1), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='relu', padding='same', name="fc_conv")(x)
+        x = Conv2D(classes, (1, 1), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='relu', padding='same', name="fc_conv")(x)
 
         # p5
-        p5 = Conv2D(21, (1, 1), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='relu', padding='same', name= "p5_conv")(x)
+        p5 = Conv2D(classes, (1, 1), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='relu', padding='same', name= "p5_conv")(x)
         p5 = BilinearUpSampling2D(pool4.shape, data_format='channels_last', name="p5_upsampling")(p5)
         # p4
-        p4 = Conv2D(21, (1, 1), activation='relu', padding='same', name="p4_conv")(pool4)
+        p4 = Conv2D(classes, (1, 1), activation='relu', padding='same', name="p4_conv")(pool4)
         
         merge_p4p5 = Add(name="p4p5_add")([p5, p4])
         merge_p4p5 = BilinearUpSampling2D(pool3.shape, data_format='channels_last', name="p4p5_upsampling")(merge_p4p5)
         # p3
-        p3 = Conv2D(21, (3, 3), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), padding='same', name="p3_conv")(pool3)
+        p3 = Conv2D(classes, (3, 3), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), padding='same', name="p3_conv")(pool3)
         
         merge_p3p4p5 = Add(name="p3p4p5_add")([merge_p4p5, p3])
         
@@ -91,7 +98,7 @@ class FCN_VGG16():
             model.load_weights(weights_path)
 
         return model
-    def __init__(self, input_shape, train=False, weight_decay=0.):
+    def __init__(self, input_shape, train=False, weight_decay=0., classes=22):
         """
         
         """
