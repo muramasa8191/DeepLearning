@@ -1,9 +1,9 @@
 import numpy as np
 import tensorflow as tf
-import keras.backend as K
-from keras.utils import conv_utils
-from keras.layers import Layer
-from keras.engine import InputSpec
+from tensorflow.python.keras import backend as K
+from tensorflow.python.keras.utils import conv_utils
+from tensorflow.python.keras.layers import Layer
+from tensorflow.python.keras.engine import InputSpec
 
 def bilinear_resize_images(x, size, method='bilinear'):
     new_size = tf.convert_to_tensor(size, dtype=tf.int32)

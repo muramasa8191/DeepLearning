@@ -1,7 +1,7 @@
-from keras.models import Model
-from keras.layers import Input, Conv2D, MaxPooling2D, Dropout, Conv2DTranspose, Concatenate, Activation, Add, BatchNormalization
-from keras.applications.vgg16 import VGG16
-from keras.regularizers import l2
+from tensorflow.python.keras.models import Model
+from tensorflow.python.keras.layers import Input, Conv2D, MaxPooling2D, Dropout, Conv2DTranspose, Concatenate, Activation, Add, BatchNormalization
+from tensorflow.python.keras.applications.vgg16 import VGG16
+from tensorflow.python.keras.regularizers import l2
 from layers.BilinearUpSampling2D import BilinearUpSampling2D
 import sys
 import os

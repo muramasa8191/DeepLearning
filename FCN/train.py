@@ -2,13 +2,13 @@ import os
 import math
 import numpy as np
 from Models.VGG16 import FCN_VGG16
-import keras.backend as K
+from tensorflow.python.keras import backend as K
 import tensorflow as tf
 from utils.pascal_util import *
-from keras.metrics import binary_crossentropy
-from keras.callbacks import LearningRateScheduler, TensorBoard, ModelCheckpoint, EarlyStopping, TerminateOnNaN
-from keras.optimizers import SGD
-from keras.preprocessing.image import ImageDataGenerator
+from tensorflow.python.keras.metrics import binary_crossentropy
+from tensorflow.python.keras.callbacks import LearningRateScheduler, TensorBoard, ModelCheckpoint, EarlyStopping, TerminateOnNaN
+from tensorflow.python.keras.optimizers import SGD
+from tensorflow.python.keras.preprocessing.image import ImageDataGenerator
 
 GPU_COUNT = 1
 RESUME = False

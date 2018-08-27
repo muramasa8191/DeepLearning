@@ -1,12 +1,12 @@
 
 import os
 import numpy as np
-import keras.backend as K
+from tensorflow.python.keras import backend as K
 import tensorflow as tf
 from PIL import Image
-from keras.utils import to_categorical
-from keras.preprocessing.image import *
-from keras.applications.imagenet_utils import preprocess_input
+from tensorflow.python.keras.utils import to_categorical
+from tensorflow.python.keras.preprocessing.image import *
+from tensorflow.python.keras.applications.imagenet_utils import preprocess_input
 
 CLASSES = 21
 SEGMENTATION_IMAGE_DIR = 'ImageSets/Segmentation/'
