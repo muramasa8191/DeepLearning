@@ -82,7 +82,7 @@ def FCN_VGG16(input_shape, train=False, weight_decay=0., classes=22):
         for layer_name in layer_names:
             layer = model.get_layer(layer_name)
             layer.set_weights(vgg16.get_layer(layer_name).get_weights())
-#                layer.trainable = False
+            layer.trainable = False
 
     else:
         # load weights
