@@ -59,7 +59,7 @@ def FCN_VGG16(input_shape, train=False, weight_decay=0., classes=22):
     p4 = Conv2D(classes, (1, 1), activation='softmax', padding='same', name="p4_predict")(pool4)
     
     merge_p4p5 = Add(name="p4p5_merge")([p5, p4])
-    merge_p4p5 = Conv2D(classes, (1, 1), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='softmax', padding='same', name="p4p5_predict")([p5, p4])    
+    merge_p4p5 = Conv2D(classes, (1, 1), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='softmax', padding='same', name="p4p5_predict")(merge_p4p5)    
     merge_p4p5 = BilinearUpSampling2D((2, 2), data_format='channels_last', name="p4p5_upsampling")(merge_p4p5)
     # p3
     p3 = Conv2D(classes, (1, 1), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='softmax', padding='same', name="p3_predict")(pool3)
