@@ -22,6 +22,11 @@ if __name__ == '__main__':
     with tf.device("/cpu:0"): 
         model = FCN_VGG16(input_shape, train=True, weight_decay=3e-3, classes=22)
 
+    if GPU_COUNT > 1:
+        from keras.utils.training_utils import multi_gpu_model
+        model = multi_gpu_model(model, gpus=GPU_COUNT)
+    
+
     model.compile(
       #        loss=crossentropy_without_ambiguous,
       loss=crossentropy_without_ambiguous,
@@ -47,10 +52,6 @@ if __name__ == '__main__':
 #    with open(model_path, 'w') as f:
 #        model_json = model.to_json()
 #        f.write(model_json)
-    
-    if GPU_COUNT > 1:
-        from keras.utils.training_utils import multi_gpu_model
-        model = multi_gpu_model(model, gpus=GPU_COUNT)
     
     def lr_scheduler(epoch):
         lr = lr_base * ((1 - float(epoch)/epochs) ** 0.9)

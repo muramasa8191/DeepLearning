@@ -404,10 +404,10 @@ class VocImageIterator(Iterator):
 
         return batch_x, batch_y
                
-    def next(self):
-        with self.lock:
-            index_array = next(self.image_data_generator)
-        return _get_batches_of_transformed_samples(index_array)
+#    def next(self):
+#        with self.lock:
+#            index_array = next(self.image_data_generator)
+#        return _get_batches_of_transformed_samples(index_array)
 
 def image_generator(file_paths, size=None, normalization=True):
     """ generate train data and val
