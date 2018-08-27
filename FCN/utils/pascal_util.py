@@ -4,9 +4,9 @@ import numpy as np
 import keras.backend as K
 import tensorflow as tf
 from PIL import Image
-from tensorflow.python.keras.utils import to_categorical
-from tensorflow.python.keras.preprocessing.image import *
-from tensorflow.python.keras.applications.imagenet_utils import preprocess_input
+from keras.utils import to_categorical
+from keras.preprocessing.image import *
+from keras.applications.imagenet_utils import preprocess_input
 
 CLASSES = 21
 SEGMENTATION_IMAGE_DIR = 'ImageSets/Segmentation/'
@@ -403,6 +403,9 @@ class VocImageIterator(Iterator):
 
         return batch_x, batch_y
                
+    def next(self, index_array):
+        return _get_batches_of_transformed_samples(index_array)
+
 def image_generator(file_paths, size=None, normalization=True):
     """ generate train data and val
     Parameters
