@@ -45,7 +45,7 @@ def FCN_VGG16(input_shape, train=False, weight_decay=0., classes=22):
     x = pool5 = MaxPooling2D(strides=(2, 2), name="block5_pool")(x)
 
     # fully-connected layer
-    x = Conv2D(4096, (7, 7), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='relu', padding='same', name="fc1")(x)
+    x = Conv2D(4096, (7, 7), dilation_rate=(2, 2), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='relu', padding='same', name="fc1")(x)
     x = Dropout(0.5, name="fc1_dropout")(x)
     x = Conv2D(4096, (1, 1), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='relu', padding='same', name="fc2")(x)
     x = Dropout(0.5, name="fc2_dropout")(x)
@@ -53,16 +53,16 @@ def FCN_VGG16(input_shape, train=False, weight_decay=0., classes=22):
 #    x = Conv2D(classes, (1, 1), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='relu', padding='same', name="fc_conv")(x)
 
     # p5
-    p5 = Conv2D(classes, (1, 1), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='softmax', padding='same', name= "p5_predict")(x)
+    p5 = Conv2D(classes, (1, 1), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='linear', padding='valid', name= "p5_predict")(x)
     p5 = BilinearUpSampling2D((2, 2), data_format='channels_last', name="p5_upsampling")(p5)
     # p4
-    p4 = Conv2D(classes, (1, 1), activation='softmax', padding='same', name="p4_predict")(pool4)
+    p4 = Conv2D(classes, (1, 1), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='linear', padding='valid', name="p4_predict")(pool4)
     
     merge_p4p5 = Add(name="p4p5_merge")([p5, p4])
-    merge_p4p5 = Conv2D(classes, (1, 1), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='softmax', padding='same', name="p4p5_predict")(merge_p4p5)    
+    merge_p4p5 = Conv2D(classes, (1, 1), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='linear', padding='valid', name="p4p5_predict")(merge_p4p5)    
     merge_p4p5 = BilinearUpSampling2D((2, 2), data_format='channels_last', name="p4p5_upsampling")(merge_p4p5)
     # p3
-    p3 = Conv2D(classes, (1, 1), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='softmax', padding='same', name="p3_predict")(pool3)
+    p3 = Conv2D(classes, (1, 1), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='linear', padding='valid', name="p3_predict")(pool3)
     
     merge_p3p4p5 = Add(name="p3p4p5_merge")([merge_p4p5, p3])
     
