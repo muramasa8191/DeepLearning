@@ -1,6 +1,6 @@
-from tensorflow.python.keras.models import Model
-from tensorflow.python.keras.layers import Input, Conv2D, MaxPooling2D, Dropout, Conv2DTranspose, Concatenate, Activation, Add, BatchNormalization
-from tensorflow.python.keras.regularizers import l2
+from keras.models import Model
+from keras.layers import Input, Conv2D, MaxPooling2D, Dropout, Conv2DTranspose, Concatenate, Activation, Add, BatchNormalization
+from keras.regularizers import l2
 
 def UNet(input_shape=(224, 224, 3), weight_decay=0., classes=21):
     """ build Unet Model
