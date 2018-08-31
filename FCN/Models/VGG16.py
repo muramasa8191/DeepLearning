@@ -6,7 +6,7 @@ from layers.BilinearUpSampling2D import BilinearUpSampling2D
 import sys
 import os
 
-def FCN_VGG16(input_shape, train=False, weight_decay=0., classes=22):
+def FCN_VGG16(input_shape, transfer=True, train=False, weight_decay=0., classes=22):
     
     """ FCN Model based on VGG16
     Parameters
@@ -45,12 +45,10 @@ def FCN_VGG16(input_shape, train=False, weight_decay=0., classes=22):
     x = pool5 = MaxPooling2D(strides=(2, 2), name="block5_pool")(x)
 
     # fully-connected layer
-    x = Conv2D(4096, (7, 7), dilation_rate=(2, 2), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='relu', padding='same', name="fc1")(x)
+    x = Conv2D(4096, (7, 7), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='relu', padding='same', name="fc1")(x)
     x = Dropout(0.5, name="fc1_dropout")(x)
     x = Conv2D(4096, (1, 1), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='relu', padding='same', name="fc2")(x)
     x = Dropout(0.5, name="fc2_dropout")(x)
-
-#    x = Conv2D(classes, (1, 1), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='relu', padding='same', name="fc_conv")(x)
 
     # p5
     p5 = Conv2D(classes, (1, 1), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='linear', padding='valid', name= "p5_predict")(x)
@@ -68,14 +66,13 @@ def FCN_VGG16(input_shape, train=False, weight_decay=0., classes=22):
     
     # upsampling
     output = BilinearUpSampling2D((8, 8), data_format='channels_last', name="output_upsampling")(merge_p3p4p5)
-#        output = Conv2DTranspose(21, (3, 3), strides=(8, 8), activation='relu', padding='same', name="out_deconv")(merge_p3p4p5)
     output = Activation('softmax', name="out")(output)
 
     model = Model(input_image, output)
 
     vgg16 = VGG16(include_top=False, weights='imagenet', input_shape=input_shape)
     
-    if train:
+    if transfer:
         # reuse weight
         layer_names = ['block1_conv1', 'block1_conv2', 'block2_conv1', 'block2_conv2', 'block3_conv1', 'block3_conv2', 'block3_conv3',
             'block4_conv1', 'block4_conv2', 'block4_conv3', 'block5_conv1', 'block5_conv2', 'block5_conv3']
@@ -83,18 +80,7 @@ def FCN_VGG16(input_shape, train=False, weight_decay=0., classes=22):
         for layer_name in layer_names:
             layer = model.get_layer(layer_name)
             layer.set_weights(vgg16.get_layer(layer_name).get_weights())
-#            layer.trainable = False
-
-    else:
-        # load weights
-        current_dir = os.path.dirname(os.path.realpath(__file__))
-        learned_model_dir = os.path.join(current_dir, '../tmp/fcn_vgg16/')
-        learned_model_dir = os.path.normpath(learned_model_dir)
-        weights_path = os.path.join(
-            learned_model_dir,
-            #                'checkpoint_weights.hdf5'
-            'model.hdf5'
-        )
-        model.load_weights(weights_path)
+            if not train:
+                layer.trainable = False
 
     return model
