@@ -15,17 +15,19 @@ RESUME = False
 if __name__ == '__main__':
 
     batch_size = 16 * GPU_COUNT
-    epochs = 100
+    epochs = 200
     lr_base = 0.01 * (float(batch_size) / 16)
     input_shape = (224, 224, 3)
     
     with tf.device("/cpu:0"): 
-        model = FCN_VGG16(input_shape, train=True, weight_decay=3e-3, classes=22)
+        model = FCN_VGG16(input_shape, train=True, weight_decay=3e-3)
 
     if GPU_COUNT > 1:
+        # structure will change after adjusting GPU model
+        model.summary()
         from keras.utils.training_utils import multi_gpu_model
         model = multi_gpu_model(model, gpus=GPU_COUNT)
-    
+
 
     model.compile(
       #        loss=crossentropy_without_ambiguous,
@@ -66,15 +68,15 @@ if __name__ == '__main__':
     checkpoint = ModelCheckpoint(filepath=checkpoint_path, save_weights_only=True)
 
     train_files, label_files = get_train_files('Dataset/VOC2012')
-#    val_files, val_labels = get_train_files('Dataset/VOC2012')
+    val_files, val_labels = get_val_files('Dataset/VOC2012')
 
     steps_per_epoch = int(np.ceil(len(train_files) / float(batch_size)))
-#    val_steps = int(np.ceil(len(val_files) / float(batch_size)))
+    val_steps = int(np.ceil(len(val_files) / float(batch_size)))
 
     datagen = VocImageDataGenerator(image_shape=input_shape,
         zoom_range=[0.5, 2.0],
         zoom_maintain_shape=True,
-        crop_mode='random',
+        crop_mode='none',
         crop_size=(input_shape[0], input_shape[1]),
         # pad_size=(505, 505),
         rotation_range=0.,

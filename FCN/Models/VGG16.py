@@ -6,7 +6,7 @@ from layers.BilinearUpSampling2D import BilinearUpSampling2D
 import sys
 import os
 
-def FCN_VGG16(input_shape, transfer=True, train=False, weight_decay=0., classes=22):
+def FCN_VGG16(input_shape, transfer=True, train=False, weight_decay=0., classes=21):
     
     """ FCN Model based on VGG16
     Parameters
@@ -46,9 +46,9 @@ def FCN_VGG16(input_shape, transfer=True, train=False, weight_decay=0., classes=
 
     # fully-connected layer
     x = Conv2D(4096, (7, 7), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='relu', padding='same', name="fc1")(x)
-    x = Dropout(0.5, name="fc1_dropout")(x)
+    x = Dropout(0.2, name="fc1_dropout")(x)
     x = Conv2D(4096, (1, 1), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='relu', padding='same', name="fc2")(x)
-    x = Dropout(0.5, name="fc2_dropout")(x)
+    x = Dropout(0.2, name="fc2_dropout")(x)
 
     # p5
     p5 = Conv2D(classes, (1, 1), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='linear', padding='valid', name= "p5_predict")(x)
@@ -57,7 +57,7 @@ def FCN_VGG16(input_shape, transfer=True, train=False, weight_decay=0., classes=
     p4 = Conv2D(classes, (1, 1), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='linear', padding='valid', name="p4_predict")(pool4)
     
     merge_p4p5 = Add(name="p4p5_merge")([p5, p4])
-    merge_p4p5 = Conv2D(classes, (1, 1), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='linear', padding='valid', name="p4p5_predict")(merge_p4p5)    
+    merge_p4p5 = Conv2D(classes, (1, 1), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='linear', padding='valid', name="p4p5_predict")(merge_p4p5)
     merge_p4p5 = BilinearUpSampling2D((2, 2), data_format='channels_last', name="p4p5_upsampling")(merge_p4p5)
     # p3
     p3 = Conv2D(classes, (1, 1), kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='linear', padding='valid', name="p3_predict")(pool3)
