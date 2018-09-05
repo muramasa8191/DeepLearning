@@ -4,30 +4,35 @@ import numpy as np
 from model import UNet
 import keras.backend as K
 import tensorflow as tf
-from ....pascal_voc_util.pascal_util import *
-from keras.metrics import binary_crossentropy
-from tensorflow.python.keras.callbacks import LearningRateScheduler, TensorBoard, ModelCheckpoint, EarlyStopping, TerminateOnNaN
-from tensorflow.python.keras.optimizers import SGD
-from tensorflow.python.keras.preprocessing.image import ImageDataGenerator
+from pascal_voc_util.pascal_util import *
+from keras.callbacks import LearningRateScheduler, TensorBoard, ModelCheckpoint, EarlyStopping, TerminateOnNaN
+from keras.optimizers import SGD, Adam
+from keras.preprocessing.image import ImageDataGenerator
 
 GPU_COUNT = 1
 RESUME = False
 
 if __name__ == '__main__':
 
-    batch_size = 16 * GPU_COUNT
+    batch_size = 1 * GPU_COUNT
     epochs = 100
     lr_base = 0.01 * (float(batch_size) / 16)
-    input_shape = (224, 224, 3)
+    input_shape = (320, 320, 3)
     
     with tf.device("/cpu:0"): 
         model = UNet(input_shape, weight_decay=3e-3, classes=21)
 
+    if GPU_COUNT > 1:
+        model.summary()
+        from keras.utils.training_utils import multi_gpu_model
+        model = multi_gpu_model(model, gpus=GPU_COUNT)
+    
     model.compile(
-        loss='categorical_crossentropy',
-        optimizer = 'adam',
+#        loss=crossentropy_without_ambiguous,
+        loss=crossentropy_without_ambiguous,
+        optimizer = Adam(lr=0.001),
 #        optimizer = SGD(lr=lr_base, momentum=0.9),
-        metrics=['accuracy']
+        metrics=['accuracy', categorical_accuracy_without_ambiguous, categorical_accuracy_only_valid_classes]
     )
 
     model.summary()
@@ -48,10 +53,6 @@ if __name__ == '__main__':
 #        model_json = model.to_json()
 #        f.write(model_json)
     
-    if GPU_COUNT > 1:
-        from keras.utils.training_utils import multi_gpu_model
-        model = multi_gpu_model(model, gpus=GPU_COUNT)
-    
     def lr_scheduler(epoch):
         lr = lr_base * ((1 - float(epoch)/epochs) ** 0.9)
         print('lr: %f' % lr)
@@ -71,8 +72,17 @@ if __name__ == '__main__':
 #    val_steps = int(np.ceil(len(val_files) / float(batch_size)))
 
     datagen = VocImageDataGenerator(image_shape=input_shape,
-                                    featurewise_center=True,
-                                    featurewise_std_normalization=True)
+                                    zoom_range=[0.5, 2.0],
+                                    zoom_maintain_shape=True,
+                                    crop_mode='random',
+                                    crop_size=(input_shape[0], input_shape[1]),
+                                    # pad_size=(505, 505),
+                                    rotation_range=0.,
+                                    shear_range=0,
+                                    horizontal_flip=True,
+                                    channel_shift_range=20.,
+                                    fill_mode='constant',
+                                    label_cval=255)
 
     hist = model.fit_generator(
         datagen.flow_from_imageset(
@@ -80,12 +90,16 @@ if __name__ == '__main__':
             directory='Dataset/VOC2012',
             class_mode='categorical',
             classes = 21,
-            batch_size = batch_size,
-            shuffle=True),
+            batch_size=batch_size, 
+            shuffle=True,
+            loss_shape=None,
+            normalize=True,
+            ignore_label=255),
         steps_per_epoch=steps_per_epoch,
         epochs=epochs,
         workers=4,
-        callbacks = [tsb, checkpoint, early_stopper, scheduler, TerminateOnNaN()]
-#        use_multiprocessing=True,
+        use_multiprocessing=True,
+#        callbacks = [tsb, checkpoint, early_stopper, scheduler, TerminateOnNaN()]
+        callbacks = [tsb, checkpoint, early_stopper, TerminateOnNaN()]
    )
     model.save_weights(save_path+'/model.hdf5')

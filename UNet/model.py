@@ -53,7 +53,7 @@ def UNet(input_shape=(224, 224, 3), weight_decay=0., classes=21):
     x = Concatenate(axis=-1, name="dec4_concat")([x, conv1])
     x = Conv2D(64, (3, 3), padding='same', kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='relu', name="dec4_conv1")(x)
     x = Conv2D(64, (3, 3), padding='same', kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), activation='relu', name="dec4_conv2")(x)
-    x = Conv2D(classes+1, (1, 1), padding='same', kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), name="dec4_conv3")(x)
+    x = Conv2D(classes, (1, 1), padding='same', kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay), name="dec4_conv3")(x)
 
     output = Activation('softmax', name="output")(x)
     
