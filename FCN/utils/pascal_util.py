@@ -20,9 +20,10 @@ def crossentropy_without_ambiguous(y_true, y_pred):
     y_pred = K.reshape(y_pred, (-1, K.int_shape(y_pred)[-1]))
     log_softmax = tf.nn.log_softmax(y_pred)
 
-#    class_weight = [0.2, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 
-#                    5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0]
-#    log_softmax = log_softmax * np.array(class_weight)
+    class_weight = [0.3, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 
+                    6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0]
+    if class_weight:
+        log_softmax = log_softmax * np.array(class_weight)
     
 
 #    y_true = K.one_hot(tf.to_int32(K.flatten(K.argmax(y_true))), K.int_shape(y_pred)[-1]+1)
@@ -173,7 +174,8 @@ class VocImageDataGenerator(ImageDataGenerator):
                         target_size=(256, 256), normalize=False,
                         classes=None, class_mode='categorical',
                         loss_shape=None, ignore_label=255,
-                        batch_size=32, shuffle=True, seed=None):
+                        batch_size=32, shuffle=False, seed=None,
+                        val_flg=False):
         if self.crop_mode == 'random' or self.crop_mode == 'center':
             target_size = self.crop_size
         return VocImageIterator(
@@ -185,7 +187,7 @@ class VocImageDataGenerator(ImageDataGenerator):
             classes=classes, class_mode=class_mode,
             data_format=self.data_format,
             label_cval = self.label_cval,
-            normalize = normalize,
+            normalize = normalize, val_flg=val_flg,
             batch_size=batch_size, shuffle=shuffle, seed=seed)
 
     def standardize(self, x):
@@ -324,7 +326,7 @@ class VocImageIterator(Iterator):
                  ignore_label=255, label_cval=255,
                  batch_size=32, shuffle=False, seed=None,
                  data_format=None, loss_shape=None,
-                 normalize=False):
+                 val_flg=False, normalize=False):
         if data_format is None:
             data_format = backend.image_data_format()
         self.directory = directory
@@ -337,6 +339,7 @@ class VocImageIterator(Iterator):
         self.loss_shape = loss_shape
         self.pad_size = pad_size
         self.normalize = normalize
+        self.val_flg = val_flg
         
         channel = 3
         if color_mode != 'rgb':
@@ -361,7 +364,12 @@ class VocImageIterator(Iterator):
         self.label_shape = target_size + (1,)
         self.class_mode = class_mode
         
-        self.train_filenames, self.label_filenames = get_train_files(directory)
+        if not self.val_flg:
+            self.train_filenames, self.label_filenames = get_train_files(directory)
+        else:
+            self.train_filenames, self.label_filenames = get_val_files(directory)
+            self.train_filenames = self.train_filenames[:30]
+            self.label_filenames = self.label_filenames[:30]
         
         self.samples = len(self.train_filenames)
 
@@ -417,7 +425,8 @@ class VocImageIterator(Iterator):
             
             if self.normalize:
                 x = x / 255.
-            x, y = self.image_data_generator.random_transform(x, y)
+            if not self.val_flg:
+                x, y = self.image_data_generator.random_transform(x, y)
             x = self.image_data_generator.standardize(x)
             
 #            print ("illegal pixel:{}".format(np.sum(y > 21) - np.sum(y == 255)))
