@@ -4,7 +4,6 @@
 
 - [FCN](https://github.com/muramasa8191/DeepLearning/tree/master/FCN)  
 [https://arxiv.org/abs/1411.4038](https://arxiv.org/abs/1411.4038)    
-モデル学習中
 - [U-Net](https://github.com/muramasa8191/DeepLearning/tree/master/UNet)  
 [https://arxiv.org/abs/1505.04597](https://arxiv.org/abs/1505.04597)  
 - SegNet
@@ -22,3 +21,4 @@
 - Fast R-CNN
 - Faster R-CNN
 - YOLO
+- SSD
