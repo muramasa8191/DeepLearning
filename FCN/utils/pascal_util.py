@@ -16,16 +16,27 @@ TRAIN_CLASS_FILE_NAME = 'trainval.txt'
 VALIDATION_LIST_FILE_NAME = 'val.txt'
 
 def crossentropy_without_ambiguous(y_true, y_pred):
-
+    
     y_pred = K.reshape(y_pred, (-1, K.int_shape(y_pred)[-1]))
     log_softmax = tf.nn.log_softmax(y_pred)
-
-    class_weight = [0.3, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 
-                    6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0]
-    if class_weight:
-        log_softmax = log_softmax * np.array(class_weight)
-    
-
+#    log_softmax = tf.log(tf.clip_by_value(y_pred, 1e-10, 1.0))
+#    class_weight = []
+#    nb_classes_pixel = []
+#    nb_classes = 0
+#    for i in range(CLASSES):
+#        sum_class = K.sum(tf.to_float(K.equal(y_true, i)))
+#        nb_classes_pixel.append(sum_class)
+#        if sum_class != 0:
+#            nb_classes += 1
+#    total = sum(nb_classes_pixel)
+#    for i in range(CLASSES):
+#        if nb_classes != 1:
+#            class_weight.append((total - nb_classes_pixel[i]) / total * nb_classes)
+#        else:
+#            class_weight.append(1.0)
+#
+#    log_softmax = log_softmax * class_weight
+        
 #    y_true = K.one_hot(tf.to_int32(K.flatten(K.argmax(y_true))), K.int_shape(y_pred)[-1]+1)
     y_true = K.one_hot(tf.to_int32(K.flatten(y_true)), K.int_shape(y_pred)[-1]+1)
     unpacked = tf.unstack(y_true, axis=-1)
@@ -33,7 +44,7 @@ def crossentropy_without_ambiguous(y_true, y_pred):
     
     cross_entropy = -K.sum(y_true * log_softmax, axis=1)
     cross_entropy_mean = K.mean(cross_entropy)
-    
+
     return cross_entropy_mean
 
 def categorical_accuracy_without_ambiguous(y_true, y_pred):
@@ -62,7 +73,21 @@ def categorical_accuracy_only_valid_classes(y_true, y_pred):
     y_true = tf.stack(unpacked[:-1], axis=-1)    
     forground = tf.not_equal(K.argmax(y_true, axis=-1), 0)
     
-    return K.sum(tf.to_float(forground & legal_labels & K.equal(K.argmax(y_true, axis=-1), K.argmax(y_pred, axis=-1)))) / K.sum(tf.to_float(legal_labels & forground))
+    denominator = K.sum(tf.to_float(legal_labels & forground))
+    def denom1(): 
+        return K.sum(tf.to_float(legal_labels))
+    def denom2():
+        return denominator
+    
+    def nume1():
+        return K.sum(tf.to_float(legal_labels & K.equal(K.argmax(y_true, axis=-1), K.argmax(y_pred, axis=-1))))
+    def nume2():
+        return K.sum(tf.to_float(forground & legal_labels & K.equal(K.argmax(y_true, axis=-1), K.argmax(y_pred, axis=-1))))
+    
+    numerator = tf.cond(K.less(denominator, tf.constant(1.0)), nume1, nume2)
+    denominator = tf.cond(K.less(denominator, tf.constant(1.0)), denom1, denom2)
+
+    return numerator / denominator
 
 def pair_random_crop(x, y, random_crop_size, data_format, sync_seed=None, **kwargs):
     np.random.seed(sync_seed)
@@ -175,13 +200,15 @@ class VocImageDataGenerator(ImageDataGenerator):
                         classes=None, class_mode='categorical',
                         loss_shape=None, ignore_label=255,
                         batch_size=32, shuffle=False, seed=None,
-                        val_flg=False):
-        if self.crop_mode == 'random' or self.crop_mode == 'center':
+                        val_flg=False, crop_mode=None):
+        if crop_mode is None:
+            crop_mode = self.crop_mode
+        if crop_mode == 'random' or crop_mode == 'center':
             target_size = self.crop_size
         return VocImageIterator(
             directory, self,
             target_size=target_size,
-            crop_mode=self.crop_mode,
+            crop_mode=crop_mode,
             pad_size=self.pad_size,
             loss_shape=loss_shape, ignore_label=ignore_label,
             classes=classes, class_mode=class_mode,
