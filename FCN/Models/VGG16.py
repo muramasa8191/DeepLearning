@@ -52,22 +52,22 @@ def FCN_VGG16(input_shape, weight_decay=0., classes=21, target=16):
     x = Dropout(0.2, name="fc2_dropout")(x)
 
     # p5
-    p5 = Conv2D(classes, (1, 1), activation='softmax', padding='valid', name= "p5_predict")(x)
+    p5 = Conv2D(classes, (1, 1), activation='linear', padding='valid', name= "p5_predict")(x)
     if target == 32:
         out_prediction = BilinearUpSampling2D((32, 32), data_format='channels_last', name="p5_upsampling")(p5)
     else:
         p5 = BilinearUpSampling2D((2, 2), data_format='channels_last', name="p5_upsampling")(p5)
         # p4
-        p4 = Conv2D(classes, (1, 1), activation='softmax', padding='valid', name="p4_predict")(pool4)
+        p4 = Conv2D(classes, (1, 1), activation='linear', padding='valid', name="p4_predict")(pool4)
         
         merge_p4p5 = Add(name="p4p5_merge")([p5, p4])
-        merge_p4p5 = Conv2D(classes, (1, 1), activation='softmax', padding='valid', name="p4p5_predict")(merge_p4p5)
+        merge_p4p5 = Conv2D(classes, (1, 1), activation='linear', padding='valid', name="p4p5_predict")(merge_p4p5)
         if target == 16:
             out_prediction = BilinearUpSampling2D((16, 16), data_format='channels_last', name="p4p5_upsampling")(merge_p4p5)
         else:
             merge_p4p5 = BilinearUpSampling2D((2, 2), data_format='channels_last', name="p4p5_upsampling")(merge_p4p5)
             # p3
-            p3 = Conv2D(classes, (1, 1), activation='softmax', padding='valid', name="p3_predict")(pool3)
+            p3 = Conv2D(classes, (1, 1), activation='linear', padding='valid', name="p3_predict")(pool3)
             
             merge_p3p4p5 = Add(name="p3p4p5_merge")([merge_p4p5, p3])
             
