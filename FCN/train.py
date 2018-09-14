@@ -17,7 +17,7 @@ RESUME = False
 
 if __name__ == '__main__':
 
-    batch_size = 20 * GPU_COUNT
+    batch_size = 1 * GPU_COUNT
     epochs = 175
     lr_base = 0.01 * (float(batch_size) / 16)
     input_shape = (224, 224, 3)
@@ -25,6 +25,9 @@ if __name__ == '__main__':
     with tf.device("/cpu:0"): 
         model = FCN_VGG16(input_shape, target=16, weight_decay=3e-3)
 
+    if not RESUME:
+        transferWeight(model, input_shape)
+    
     if GPU_COUNT > 1:
         # structure will change after adjusting GPU model
         model.summary()
@@ -50,8 +53,6 @@ if __name__ == '__main__':
     if RESUME:
         print('checkPoint file:{}'.format(checkpoint_path))
         model.load_weights(checkpoint_path, by_name=False)
-    else:
-        transferWeight(model, input_shape)
 
 #    model_path = os.path.join(save_path, "model.json")
 #    # save model structure
@@ -79,7 +80,7 @@ if __name__ == '__main__':
     val_steps = 30
 
     datagen = VocImageDataGenerator(image_shape=input_shape,
-        zoom_range=[0.5, 2.0],
+        zoom_range=[1.0, 1.0],
         zoom_maintain_shape=True,
         crop_mode='random',
         crop_size=(input_shape[0], input_shape[1]),
@@ -120,8 +121,8 @@ if __name__ == '__main__':
           shuffle=True),
        validation_steps=val_steps,
        epochs=epochs,
-       workers=4,
-       use_multiprocessing=True,
+#       workers=4,
+#       use_multiprocessing=True,
        callbacks = [tsb, checkpoint, early_stopper]#, scheduler, TerminateOnNaN()]
     )
     model.save_weights(save_path+'/model.hdf5')

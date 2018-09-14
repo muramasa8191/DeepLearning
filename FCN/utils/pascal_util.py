@@ -193,7 +193,11 @@ class VocImageDataGenerator(ImageDataGenerator):
                             'Received arg: ', zoom_range)
         self.zoom_maintain_shape = zoom_maintain_shape
 
-        super(VocImageDataGenerator, self).__init__()
+        super(VocImageDataGenerator, self).__init__(rotation_range=rotation_range,
+                                                    zoom_range=zoom_range,
+                                                    brightness_range=brightness_range,
+                                                    horizontal_flip=horizontal_flip,
+                                                    vertical_flip=vertical_flip)
 
     def flow_from_imageset(self, directory,
                         target_size=(256, 256), normalize=False,
@@ -328,7 +332,7 @@ class VocImageDataGenerator(ImageDataGenerator):
 #                x = flip_axis(x, img_row_index)
 #                y = flip_axis(y, img_row_index)
                
-        params = ImageDataGenerator.get_random_transform(self, img_shape=x.shape, seed=None)
+        params = super().get_random_transform(img_shape=x.shape, seed=None)
         
         x = ImageDataGenerator.apply_transform(self, x, params)
         fill_mode = self.fill_mode
@@ -417,7 +421,8 @@ class VocImageIterator(Iterator):
         for i, j in enumerate(index_array):
             img = load_img(self.train_filenames[j], grayscale, target_size=None)
             label = Image.open(self.label_filenames[j])
-
+            if not self.val_flg:
+                self.palette = label.getpalette()
             if self.target_size is not None:
                 if self.crop_mode != 'none':
                     x = img_to_array(img, data_format=self.data_format)
@@ -452,21 +457,37 @@ class VocImageIterator(Iterator):
             
             if self.normalize:
                 x = x / 255.
+            
             if not self.val_flg:
                 x, y = self.image_data_generator.random_transform(x, y)
-            x = self.image_data_generator.standardize(x)
+                x = self.image_data_generator.standardize(x)
             
 #            print ("illegal pixel:{}".format(np.sum(y > 21) - np.sum(y == 255)))
 
+#            if not self.val_flg:
+#                print (self.train_filenames[j])
+#                label_img = Image.fromarray(np.squeeze(y).astype(np.uint8), mode='P')
+#                label_img.putpalette(self.palette)
+#                t_img = array_to_img(x*255.)
+#                t_img.show(title=str(j))
+#                label_img.show(title=str(j))
+            
             if self.ignore_label:
                 y[np.where(y == self.ignore_label)] = self.classes
     
-#            print ("y.shape:{}".format(y.shape))
+            if np.sum(y>self.classes):
+                raise Exception('illegal class found')
             if self.loss_shape is not None:
                 y = np.reshape(y, self.loss_shape)
-#            max_val = np.max(y)
-#            print ("* y.shape:{}".format(y.shape))
 
+#            if not self.val_flg:
+#                img = Image(label)
+#                img.resize(y[:2])
+#                for xx in y.shape[0]:
+#                    row = []
+#                    for yy in y.shape[1]:
+#                        img[xx][yy] = label[xx][yy][0])
+#                img.show()
 #            y = to_categorical(y, self.classes + 1)
 
             batch_x[i] = x
