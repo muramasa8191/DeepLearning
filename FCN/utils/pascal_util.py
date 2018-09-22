@@ -204,7 +204,11 @@ class VocImageDataGenerator(ImageDataGenerator):
                         classes=None, class_mode='categorical',
                         loss_shape=None, ignore_label=255,
                         batch_size=32, shuffle=False, seed=None,
-                        val_flg=False, crop_mode=None):
+                        val_flg=False, crop_mode=None,
+                        img_directory='JPEGImages/', 
+                        seg_directory='SegmentationClass/', 
+                        seg_image_dir=None,
+                        coco_flg=False):
         if crop_mode is None:
             crop_mode = self.crop_mode
         if crop_mode == 'random' or crop_mode == 'center':
@@ -219,7 +223,11 @@ class VocImageDataGenerator(ImageDataGenerator):
             data_format=self.data_format,
             label_cval = self.label_cval,
             normalize = normalize, val_flg=val_flg,
-            batch_size=batch_size, shuffle=shuffle, seed=seed)
+            batch_size=batch_size, shuffle=shuffle, seed=seed,
+            img_directory=img_directory,
+            seg_directory=seg_directory,
+            seg_image_dir=seg_image_dir,
+            coco_flg=coco_flg)
 
     def standardize(self, x):
         if self.preprocessing_function:
@@ -357,7 +365,11 @@ class VocImageIterator(Iterator):
                  ignore_label=255, label_cval=255,
                  batch_size=32, shuffle=False, seed=None,
                  data_format=None, loss_shape=None,
-                 val_flg=False, normalize=False):
+                 val_flg=False, normalize=False,
+                 img_directory='JPEGImages/', 
+                 seg_directory='SegmentationClass/', 
+                 seg_image_dir=None,
+                 coco_flg=False):
         if data_format is None:
             data_format = backend.image_data_format()
         self.directory = directory
@@ -371,6 +383,7 @@ class VocImageIterator(Iterator):
         self.pad_size = pad_size
         self.normalize = normalize
         self.val_flg = val_flg
+        self.coco_flg = coco_flg
         
         channel = 3
         if color_mode != 'rgb':
@@ -396,11 +409,11 @@ class VocImageIterator(Iterator):
         self.class_mode = class_mode
         
         if not self.val_flg:
-            self.train_filenames, self.label_filenames = get_train_files(directory)
+            self.train_filenames, self.label_filenames = get_train_files(directory, img_directory=img_directory, seg_directory=seg_directory, seg_image_dir=seg_image_dir)
         else:
-            self.train_filenames, self.label_filenames = get_val_files(directory)
-            self.train_filenames = self.train_filenames[:30]
-            self.label_filenames = self.label_filenames[:30]
+            self.train_filenames, self.label_filenames = get_val_files(directory, img_directory=img_directory, seg_directory=seg_directory, seg_image_dir=seg_image_dir)
+            self.train_filenames = self.train_filenames[:50]
+            self.label_filenames = self.label_filenames[:50]
         
         self.samples = len(self.train_filenames)
 
@@ -472,9 +485,19 @@ class VocImageIterator(Iterator):
 #                t_img.show(title=str(j))
 #                label_img.show(title=str(j))
             
+            # 183 -> -1 for COCO
+            if self.coco_flg:
+                y[np.where(y == self.classes)] = -1
+#                print ("escaped {} pixels".format(np.sum(y==-1)))
+            
+            # 0 -> 183 for COCO
             if self.ignore_label:
                 y[np.where(y == self.ignore_label)] = self.classes
-    
+            
+            # -1 -> 0 for COCO
+            if self.coco_flg:
+                y[np.where(y== -1)] = 0
+            
             if np.sum(y>self.classes):
                 raise Exception('illegal class found')
             if self.loss_shape is not None:
@@ -564,15 +587,18 @@ def pascal_data_generator(data_paths, val_paths, size=None):
 
     return [img_data, img_segmented] 
 
-def get_train_files(root_dir):
+def get_train_files(root_dir, img_directory='JPEGImages/', seg_directory='SegmentationClass/', seg_image_dir=None):
     
     train_data_files = []
     train_class_files = []
     
-    path = os.path.join(root_dir, SEGMENTATION_IMAGE_DIR)
+    if seg_image_dir is None:
+        seg_image_dir = SEGMENTATION_IMAGE_DIR
     
-    img_dir = os.path.join(root_dir + '/', 'JPEGImages/')
-    seg_dir = os.path.join(root_dir + '/', 'SegmentationClass/')
+    path = os.path.join(root_dir, seg_image_dir)
+    
+    img_dir = os.path.join(root_dir + '/', img_directory)
+    seg_dir = os.path.join(root_dir + '/', seg_directory)
     
     with open(os.path.join(path, TRAIN_LIST_FILE_NAME)) as f:
         for s in f:
@@ -582,15 +608,18 @@ def get_train_files(root_dir):
 
     return [train_data_files, train_class_files]
 
-def get_val_files(root_dir):
+def get_val_files(root_dir, img_directory='JPEGImages/', seg_directory='SegmentationClass/', seg_image_dir=None):
     
     val_data_files = []
     val_class_files = []
     
-    path = os.path.join(root_dir, SEGMENTATION_IMAGE_DIR)
+    if seg_image_dir is None:
+        seg_image_dir = SEGMENTATION_IMAGE_DIR
     
-    img_dir = os.path.join(root_dir + '/', 'JPEGImages/')
-    seg_dir = os.path.join(root_dir + '/', 'SegmentationClass/')
+    path = os.path.join(root_dir, seg_image_dir)
+    
+    img_dir = os.path.join(root_dir + '/', img_directory)
+    seg_dir = os.path.join(root_dir + '/', seg_directory)
     
     with open(os.path.join(path, VALIDATION_LIST_FILE_NAME)) as f:
         for s in f:
